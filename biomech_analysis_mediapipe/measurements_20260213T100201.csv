@@ -1,0 +1,39 @@
+Measurement Type,Name,Value,Unit
+Length,Head to L Shoulder,25.39,cm
+Length,Head to R Shoulder,29.23,cm
+Length,Height (Segments),170.18,cm
+Length,Hip Width,20.53,cm
+Length,L Ankle to Heel,9.01,cm
+Length,L Femur,39.48,cm
+Length,L Hand Length,12.55,cm
+Length,L Heel to Toe,28.30,cm
+Length,L Hip to R Knee,43.27,cm
+Length,L Humerus,28.35,cm
+Length,L Knee to Ankle,41.56,cm
+Length,L Radius,27.30,cm
+Length,L Shoulder to L Hip,55.54,cm
+Length,L Shoulder to R Hip,62.77,cm
+Length,L Tibia,41.56,cm
+Length,R Ankle to Heel,9.09,cm
+Length,R Femur,40.15,cm
+Length,R Hand Length,7.85,cm
+Length,R Heel to Toe,34.69,cm
+Length,R Hip to L Knee,43.95,cm
+Length,R Humerus,23.61,cm
+Length,R Knee to Ankle,40.25,cm
+Length,R Radius,23.92,cm
+Length,R Shoulder to L Hip,61.17,cm
+Length,R Shoulder to R Hip,56.06,cm
+Length,R Tibia,40.25,cm
+Length,Shoulder Width,36.12,cm
+Length,Torso Length,55.19,cm
+Angle,L Ankle,145.24,degrees
+Angle,L Elbow,172.88,degrees
+Angle,L Hip,167.33,degrees
+Angle,L Knee,177.65,degrees
+Angle,L Shoulder,96.65,degrees
+Angle,R Ankle,139.35,degrees
+Angle,R Elbow,172.60,degrees
+Angle,R Hip,156.67,degrees
+Angle,R Knee,163.58,degrees
+Angle,R Shoulder,99.59,degrees

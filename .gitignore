@@ -1,0 +1,15 @@
+calib_left/
+calib_right/
+*debug*/
+videos/
+*measurement/*
+_pycache__/
+.cpython-*/
+calib_ss_left/
+calib_ss_right/
+calib_ss_left_4k/
+calib_ss_right_4k/
+whole_body_measurement_sidebyside/
+whole_body_measurement_sidebyside_hrnet/
+archive/
+arm_elgnth_measurement/

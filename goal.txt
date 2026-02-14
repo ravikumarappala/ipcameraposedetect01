@@ -1,0 +1,8 @@
+1. get input from two cameras
+2. show the two camera outputs in two windows with 720pxls
+3. use mediapipe to detect hands (three points should be shown on camera windows - shoulder
+elbow and wrist)
+4. doing tht triangulation part to get the 3d position of the hand 
+
+
+
