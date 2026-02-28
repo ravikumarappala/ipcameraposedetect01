@@ -1,0 +1,42 @@
+PARAMETERS
+Model Used,mediapipe
+Timestamp,20260214T084430
+RMS Reprojection Error,1.48
+Distance Between Cameras,126.33
+Angle Between Cameras (deg),0.00
+Human Height Provided,168.00
+Original Calculated Height,189.24
+Scale Factor Applied,0.8878
+Height Difference,21.24
+
+JOINT COORDINATES (mm)
+Body Part,Left X,Left Y,Left Z,Right X,Right Y,Right Z
+eye,915.74,796.21,-3107.30,872.49,779.69,-3042.36
+ear,909.79,821.20,-3267.73,812.85,800.44,-3181.65
+shoulder,1025.03,605.88,-3378.14,648.38,605.86,-3313.69
+elbow,1065.02,311.78,-3476.87,575.30,307.03,-3380.72
+wrist,1095.84,18.29,-3451.56,554.61,18.36,-3363.99
+hip,913.54,28.90,-3482.97,699.34,32.40,-3433.09
+knee,877.82,-423.23,-3615.45,681.37,-410.26,-3580.60
+ankle,843.54,-827.41,-3759.64,668.89,-823.92,-3711.47
+heel,811.57,-880.77,-3795.08,684.72,-876.77,-3745.39
+foot,870.27,-938.27,-3650.54,631.03,-942.46,-3606.56
+nose,907.49,734.97,-3010.43,,,
+
+SEGMENT LENGTHS (cm)
+Segment,Left Length,Right Length,Difference
+Humerus,27.77,27.95,0.18
+Radius,26.29,25.74,0.56
+Femur,41.95,41.45,0.49
+Tibia,38.22,38.53,0.32
+Shoulder Width,33.92,,
+Hip Width,19.53,,
+Torso Length,52.10,,
+
+JOINT ANGLES (degrees)
+Joint,Left Angle,Right Angle,Difference
+Shoulder,29.87,28.38,1.48
+Elbow,156.64,161.69,5.05
+Hip,167.91,165.26,2.65
+Knee,176.70,178.96,2.26
+Ankle,114.49,120.43,5.94

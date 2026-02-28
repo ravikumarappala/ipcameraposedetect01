@@ -1,0 +1,43 @@
+============================================================
+SESSION INFORMATION
+============================================================
+
+COMMAND EXECUTED:
+  python3 image_body_3d_batch_organized.py \
+    --images 1,2 \
+    --height 168.0 \
+    --model mediapipe \
+    --source ip
+
+IMAGES PROCESSED:
+  - Image 1
+  - Image 2
+  Total: 2 images
+
+CALIBRATION PARAMETERS:
+  Baseline (distance between cameras): 126.33 cm
+  RMS Reprojection Error: 1.4783 pixels
+  Camera Angle: 0.00 degrees
+
+RESULTS SUMMARY:
+  Target Height: 168.0 cm
+  Average Measured Height (raw): 184.2 cm
+  Scaling Applied: Yes
+  Successful Measurements: 2/2
+
+KEY MEASUREMENTS (averaged, cm):
+  Hip Width: 20.26
+  L Femur: 43.78
+  L Humerus: 27.29
+  L Radius: 26.17
+  L Tibia: 40.11
+  R Femur: 42.26
+  R Humerus: 28.29
+  R Radius: 27.50
+  R Tibia: 39.97
+  Shoulder Width: 35.94
+  Torso Length: 55.03
+
+============================================================
+Generated: 20260214T205034
+============================================================

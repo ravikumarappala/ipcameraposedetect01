@@ -1,0 +1,54 @@
+BATCH ANALYSIS SUMMARY
+Timestamp,20260214T172559
+Images Processed,"[1, 2, 3, 5, 6, 8]"
+Models Used,mediapipe
+Total Measurements,6
+
+STATISTICS
+Metric,Value (cm)
+Mean Height,178.92
+Median Height,178.62
+Std Deviation,5.70
+Min Height,172.18
+Max Height,189.24
+Range,17.06
+
+True Height,168.00
+Mean Error,10.92
+Mean Error %,6.50%
+
+INDIVIDUAL MEASUREMENTS
+Image,Model,Raw Height (cm),Scale Factor
+1,mediapipe,179.19,0.9375
+2,mediapipe,189.24,0.8878
+3,mediapipe,181.75,0.9244
+5,mediapipe,178.05,0.9435
+6,mediapipe,173.09,0.9706
+8,mediapipe,172.18,0.9757
+
+MEAN SCALED SEGMENTS (Normalized to 168 cm)
+Segment,Mean (cm),Std (cm),N
+Hip Width,20.66,1.02,6
+L Femur,43.51,1.77,6
+L Humerus,28.97,1.30,6
+L Radius,27.35,1.03,6
+L Tibia,41.36,2.05,6
+R Femur,42.67,0.97,6
+R Humerus,28.85,1.12,6
+R Radius,28.59,1.99,6
+R Tibia,41.80,1.65,6
+Shoulder Width,36.43,2.13,6
+Torso Length,55.33,2.44,6
+
+MEAN SCALED ANGLES
+Angle,Mean (deg),Std (deg),N
+L Ankle,108.44,13.26,6
+L Elbow,167.84,8.72,6
+L Hip,165.25,3.34,6
+L Knee,175.83,1.40,6
+L Shoulder,55.81,37.89,6
+R Ankle,109.23,13.72,6
+R Elbow,163.12,5.82,6
+R Hip,160.71,4.52,6
+R Knee,175.22,4.56,6
+R Shoulder,53.20,35.95,6

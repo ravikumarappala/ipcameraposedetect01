@@ -1,0 +1,39 @@
+PARAMETERS
+Model Used,mediapipe
+Timestamp,20260214T204352
+RMS Reprojection Error,0.00
+Distance Between Cameras,257.60
+Angle Between Cameras (deg),0.00
+Human Height Provided,168.00
+
+JOINT COORDINATES (mm)
+Body Part,Left X,Left Y,Left Z,Right X,Right Y,Right Z
+eye,736.74,204.52,-154.90,741.24,203.28,-152.70
+ear,734.90,204.14,-155.64,743.90,201.52,-151.19
+shoulder,730.85,193.30,-156.58,753.72,187.16,-145.07
+elbow,714.44,196.48,-164.95,770.27,180.32,-136.68
+wrist,697.46,204.55,-174.46,784.71,179.19,-130.09
+hip,743.00,157.45,-147.39,756.30,153.49,-140.69
+knee,747.33,135.02,-143.51,760.74,131.26,-136.90
+ankle,750.56,114.62,-140.56,765.51,111.35,-133.28
+heel,752.11,112.08,-139.57,764.17,109.62,-133.85
+foot,748.47,108.68,-141.12,770.24,103.31,-130.61
+nose,739.24,201.64,-153.46,,,
+
+SEGMENT LENGTHS (cm)
+Segment,Left Length,Right Length,Difference
+Humerus,33.34,35.25,1.92
+Radius,37.54,28.43,9.11
+Femur,41.30,40.96,0.34
+Tibia,37.18,37.05,0.13
+Shoulder Width,46.91,,
+Hip Width,27.46,,
+Torso Length,64.45,,
+
+JOINT ANGLES (degrees)
+Joint,Left Angle,Right Angle,Difference
+Shoulder,130.35,75.51,54.83
+Elbow,167.06,163.47,3.59
+Hip,169.75,169.38,0.37
+Knee,177.51,177.79,0.28
+Ankle,148.76,162.39,13.62
