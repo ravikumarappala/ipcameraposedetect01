@@ -1,0 +1,68 @@
+"""
+Debug Output Patch for image_body_3d_modular.py
+
+To enable debug intermediate outputs, run with --debug flag:
+    python3 image_body_3d_modular.py --num 2 --height 168 --model mediapipe --debug
+
+This will save intermediate outputs to:
+    biomech_analysis_mediapipe/debug/intermediate/
+
+Outputs include:
+1. 1_mediapipe_2d_left.png - 2D keypoints visualized on left image
+2. 2_triangulation_results.txt - 3D coordinates in camera and world frames
+3. Console prints of sample intermediate data
+
+To patch the file, add the following changes:
+========================================================
+
+1. ADD DEBUG FLAG (after line 797):
+    parser.add_argument('--debug', '-d', action='store_true',
+                       help='Save intermediate outputs (2D keypoints, 3D coords, etc.)')
+
+2. SETUP DEBUG MODE (after model/pose3d/analyzer initialization around line 832):
+    # Setup debug mode
+    if args.debug:
+        debug_dir = os.path.join(Config.OUTPUT_DIRS.get(args.model, 'biomech_analysis'), 'debug')
+        os.makedirs(debug_dir, exist_ok=True)
+        model._debug_mode = True
+        model._debug_dir = debug_dir
+       pose3d._debug_mode = True
+        pose3d._debug_dir = debug_dir
+        print(f"\\n🔍 DEBUG MODE: Intermediate outputs → {debug_dir}/intermediate/\\n")
+
+3. MODIFY MediaPipeModel.detect() to add debug output before final return:
+        # Debug: Save 2D keypoint visualization
+        if hasattr(self, '_debug_mode') and self._debug_mode:
+            debug_dir = os.path.join(self._debug_dir, 'intermediate')
+            os.makedirs(debug_dir, exist_ok=True)
+            
+            debug_img = frameL.copy()
+            for name, pt in kp_left.items():
+                x, y = int(pt[0]), int(pt[1])
+                cv2.circle(debug_img, (x, y), 4, (0, 255, 0), -1)
+                cv2.putText(debug_img, name, (x+5, y-5), 
+                           cv2.FONT_HERSHEY_SIMPLEX, 0.3, (0, 255, 0), 1)
+            
+            cv2.imwrite(os.path.join(debug_dir, '1_mediapipe_2d_left.png'), debug_img)
+            print(f"  → Saved 2D keypoints: intermediate/1_mediapipe_2d_left.png")
+
+4. MODIFY Pose3D.reconstruct() to add debug output before final return:
+        # Debug: Save intermediate data
+        if hasattr(self, '_debug_mode') and self._debug_mode:
+            debug_dir = os.path.join(self._debug_dir, 'intermediate')
+            os.makedirs(debug_dir, exist_ok=True)
+            
+            with open(os.path.join(debug_dir, '2_triangulation_results.txt'), 'w') as f:
+                f.write("3D RECONSTRUCTION RESULTS\\n" + "="*60 + "\\n\\n")
+                f.write("CAMERA COORDINATES (mm):\\n")
+                f.write(f"{'Joint':<15} {'X':>10} {'Y':>10} {'Z':>10}\\n" + "-"*50 + "\\n")
+                for i, name in enumerate(names):
+                    f.write(f"{name:<15} {pts_cam[i][0]:10.2f} {pts_cam[i][1]:10.2f} {pts_cam[i][2]:10.2f}\\n")
+                
+                f.write("\\n\\nWORLD COORDINATES (mm):\\n")
+                f.write(f"{'Joint':<15} {'X':>10} {'Y':>10} {'Z':>10}\\n" + "-"*50 + "\\n")
+                for i, name in enumerate(names):
+                    f.write(f"{name:<15} {pts_world[i][0]:10.2f} {pts_world[i][1]:10.2f} {pts_world[i][2]:10.2f}\\n")
+            
+            print(f"  → Saved 3D coordinates: intermediate/2_triangulation_results.txt")
+"""

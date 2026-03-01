@@ -1,0 +1,38 @@
+--- JOINT COORDINATES ---
+Body Part,Left X,Left Y,Left Z,Right X,Right Y,Right Z
+ankle,622.74,-733.81,-3447.72,489.22,-733.54,-3419.91
+ear,712.09,747.85,-3060.49,547.39,738.00,-3008.95
+elbow,1023.69,598.18,-3190.82,201.37,602.33,-3073.15
+eye,673.80,742.62,-2923.60,620.98,739.41,-2907.28
+hip,696.38,51.17,-3199.65,492.27,47.66,-3145.48
+knee,655.50,-347.20,-3338.30,491.20,-344.31,-3263.02
+nose,661.29,694.34,-2865.87,,,
+shoulder,771.18,588.72,-3127.56,446.83,591.76,-3095.10
+wrist,1276.40,618.14,-3275.24,-73.47,625.25,-3142.14
+"
+--- SEGMENT LENGTHS (cm) ---"
+Segment,Left Length,Right Length,Difference
+Femur,42.38,40.92,1.46
+Hip Width,21.12,,
+Humerus,26.05,24.67,1.38
+Radius,26.72,28.43,1.71
+Shoulder Width,32.60,,
+Tibia,40.31,41.97,1.65
+Torso Length,54.45,,
+"
+--- JOINT ANGLES (degrees) ---"
+Joint,Left Angle,Right Angle,Difference
+Elbow,175.08,160.71,14.36
+Hip,168.30,167.60,0.70
+Knee,176.51,174.74,1.78
+Shoulder,58.30,59.53,1.23
+"
+--- PARAMETERS ---"
+Human Height Calculated,168.00
+RMS Left-Right Keypoints,561.69
+Distance Between Cameras,1263.25
+Angle Between Cameras (deg),-178.98
+Human Height Provided,168.00
+Original Calculated Height,189.40
+Scale Factor Applied,0.8870
+Height Difference,21.40

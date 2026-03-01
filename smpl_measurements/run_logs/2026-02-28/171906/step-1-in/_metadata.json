@@ -1,0 +1,21 @@
+{
+  "run_id": "20260228_171906",
+  "step_num": 1,
+  "step_name": "load_images",
+  "direction": "in",
+  "timestamp": "2026-02-28T17:19:06.220196",
+  "fields": {
+    "left_path": {
+      "type": "str",
+      "value": "ip/test_ss_left1.png"
+    },
+    "right_path": {
+      "type": "str",
+      "value": "ip/test_ss_right1.png"
+    },
+    "calib_path": {
+      "type": "str",
+      "value": "stereo_params_sidebyside.npz"
+    }
+  }
+}

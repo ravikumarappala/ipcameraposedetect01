@@ -1,0 +1,17 @@
+{
+  "run_id": "20260228_192404",
+  "step_num": 6,
+  "step_name": "body_measurements",
+  "direction": "in",
+  "timestamp": "2026-02-28T19:24:40.577310",
+  "fields": {
+    "num_joints": {
+      "type": "int",
+      "value": 24
+    },
+    "num_vertices": {
+      "type": "int",
+      "value": 6890
+    }
+  }
+}

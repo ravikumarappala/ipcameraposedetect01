@@ -1,0 +1,404 @@
+#!/usr/bin/env python3
+"""
+image_body_3d_batch.py
+Batch processing script to average measurements from multiple images/models
+for robust height estimation
+"""
+
+import sys
+import os
+import numpy as np
+import argparse
+from datetime import datetime
+import csv
+
+# Import from the modular script
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
+def run_single_measurement(image_num, model_type, height=None):
+    """Run single measurement and return results"""
+    from image_body_3d_modular import (
+        Config, StereoCalibration, load_model, Pose3D, 
+        LengthAnalysis, OutputManager
+    )
+    import cv2
+    
+    # Initialize components
+    calib = StereoCalibration(Config.PARAMS_FILE)
+    model = load_model(model_type)
+    pose3d = Pose3D(calib, model.landmarks_map)
+    analyzer = LengthAnalysis()
+    
+    # Load images
+    suffix = str(image_num) if image_num else ''
+    img_left_path = f"test_ss_left{suffix}.png"
+    img_right_path = f"test_ss_right{suffix}.png"
+    
+    frameL = cv2.imread(img_left_path)
+    frameR = cv2.imread(img_right_path)
+    
+    if frameL is None or frameR is None:
+        return None
+    
+    # Detect 2D keypoints
+    kp_left, kp_right = model.detect(frameL, frameR)
+    
+    if kp_left is None or kp_right is None:
+        return None
+    
+    # Reconstruct 3D
+    points = pose3d.reconstruct(kp_left, kp_right, verbose=False)
+    
+    # Calculate measurements
+    segments = analyzer.calculate_segments(points)
+    angles = analyzer.calculate_angles(points)
+    measured_height = analyzer.estimate_height(points, segments)
+    
+    # Apply scaling if true height provided
+    scale_factor = 1.0
+    if height:
+        scale_factor = height / measured_height
+        # Scale all segment lengths
+        segments = {k: v * scale_factor for k, v in segments.items()}
+        # Angles don't change with scaling
+    
+    return {
+        'image_num': image_num,
+        'model': model_type,
+        'height': measured_height,
+        'scaled_height': height if height else measured_height,
+        'scale_factor': scale_factor,
+        'segments': segments,
+        'angles': angles,
+        'points_3d': points,
+        'keypoints_2d': kp_left,
+        'frame': frameL
+    }
+
+def main():
+    parser = argparse.ArgumentParser(description='Batch 3D Pose Analysis with Averaging')
+    parser.add_argument('--images', '-i', type=str, required=True, 
+                       help='Image numbers to process (e.g., "1,2,3" or "1-3")')
+    parser.add_argument('--models', '-m', type=str, default='mediapipe,hrnet',
+                       help='Models to use, comma-separated (default: mediapipe,hrnet)')
+    parser.add_argument('--height', type=float, default=None, 
+                       help='True height in cm for comparison')
+    parser.add_argument('--output', '-o', type=str, default='batch_analysis.csv',
+                       help='Output CSV file for summary')
+    args = parser.parse_args()
+    
+    # Parse image numbers
+    image_nums = []
+    if '-' in args.images:
+        start, end = args.images.split('-')
+        image_nums = list(range(int(start), int(end) + 1))
+    else:
+        image_nums = [int(x) for x in args.images.split(',')]
+    
+    # Parse models
+    models = [m.strip() for m in args.models.split(',')]
+    
+    print(f"\n{'='*60}")
+    print(f"BATCH PROCESSING: {len(image_nums)} images × {len(models)} models")
+    print(f"Images: {image_nums}")
+    print(f"Models: {models}")
+    print(f"{'='*60}\n")
+    
+    # Collect all measurements
+    results = []
+    failed = []
+    
+    for img_num in image_nums:
+        for model_type in models:
+            print(f"Processing: Image {img_num}, Model {model_type}...", end=' ')
+            try:
+                result = run_single_measurement(img_num, model_type, args.height)
+                if result:
+                    results.append(result)
+                    print(f"✓ Height: {result['height']:.2f} cm")
+                else:
+                    failed.append((img_num, model_type, "Detection failed"))
+                    print("✗ Detection failed")
+            except Exception as e:
+                failed.append((img_num, model_type, str(e)))
+                print(f"✗ Error: {e}")
+    
+    if not results:
+        print("\n❌ No successful measurements!")
+        return
+    
+    # Calculate statistics
+    heights = [r['height'] for r in results]
+    mean_height = np.mean(heights)
+    median_height = np.median(heights)
+    std_height = np.std(heights)
+    min_height = np.min(heights)
+    max_height = np.max(heights)
+    
+    print(f"\n{'='*60}")
+    print(f"SUMMARY STATISTICS ({len(results)} measurements)")
+    print(f"{'='*60}")
+    print(f"Mean Height:      {mean_height:.2f} cm")
+    print(f"Median Height:    {median_height:.2f} cm")
+    print(f"Std Deviation:    {std_height:.2f} cm ({std_height/mean_height*100:.1f}%)")
+    print(f"Min Height:       {min_height:.2f} cm")
+    print(f"Max Height:       {max_height:.2f} cm")
+    print(f"Range:            {max_height - min_height:.2f} cm")
+    
+    if args.height:
+        print(f"\nTrue Height:      {args.height:.2f} cm")
+        print(f"Mean Error:       {abs(mean_height - args.height):.2f} cm ({abs(1-mean_height/args.height)*100:.1f}%)")
+        print(f"Median Error:     {abs(median_height - args.height):.2f} cm ({abs(1-median_height/args.height)*100:.1f}%)")
+    
+    print(f"{'='*60}\n")
+    
+    # Group by model
+    print("BY MODEL:")
+    for model_type in models:
+        model_results = [r for r in results if r['model'] == model_type]
+        if model_results:
+            model_heights = [r['height'] for r in model_results]
+            print(f"  {model_type:12s}: {np.mean(model_heights):6.2f} cm ± {np.std(model_heights):4.2f} cm (n={len(model_heights)})")
+    
+    # Group by image
+    print("\nBY IMAGE:")
+    for img_num in image_nums:
+        img_results = [r for r in results if r['image_num'] == img_num]
+        if img_results:
+            img_heights = [r['height'] for r in img_results]
+            print(f"  Image {img_num:2d}:      {np.mean(img_heights):6.2f} cm ± {np.std(img_heights):4.2f} cm (n={len(img_heights)})")
+    
+    if failed:
+        print(f"\nFailed measurements: {len(failed)}")
+        for img, model, reason in failed:
+            print(f"  - Image {img}, {model}: {reason}")
+    
+    # Calculate mean scaled measurements if height was provided
+    if args.height:
+        print(f"\n{'='*60}")
+        print(f"MEAN SCALED MEASUREMENTS (Normalized to {args.height:.0f} cm)")
+        print(f"{'='*60}")
+        
+        # Collect all segment names
+        all_segment_names = set()
+        all_angle_names = set()
+        for r in results:
+            all_segment_names.update(r['segments'].keys())
+            all_angle_names.update(r['angles'].keys())
+        
+        # Calculate mean segments
+        print("\nMEAN SEGMENT LENGTHS (cm):")
+        print(f"{'Segment':<20} {'Mean':>8} {'Std':>8} {'n':>4}")
+        print("-" * 45)
+        for seg_name in sorted(all_segment_names):
+            values = [r['segments'].get(seg_name, 0) for r in results if seg_name in r['segments']]
+            if values:
+                mean_val = np.mean(values)
+                std_val = np.std(values)
+                print(f"{seg_name:<20} {mean_val:8.2f} {std_val:8.2f} {len(values):4d}")
+        
+        # Calculate mean angles
+        print("\nMEAN JOINT ANGLES (degrees):")
+        print(f"{'Angle':<20} {'Mean':>8} {'Std':>8} {'n':>4}")
+        print("-" * 45)
+        for angle_name in sorted(all_angle_names):
+            values = [r['angles'].get(angle_name, 0) for r in results if angle_name in r['angles']]
+            if values:
+                mean_val = np.mean(values)
+                std_val = np.std(values)
+                print(f"{angle_name:<20} {mean_val:8.2f} {std_val:8.2f} {len(values):4d}")
+        
+        print(f"{'='*60}\n")
+    
+    # Generate mean outputs similar to modular script
+    if args.height and results:
+        from image_body_3d_modular import OutputManager
+        
+        print(f"{'='*60}")
+        print("GENERATING MEAN OUTPUTS")
+        print(f"{'='*60}\n")
+        
+        # Compute mean 3D points across all measurements
+        all_point_names = set()
+        for r in results:
+            all_point_names.update(r['points_3d'].keys())
+        
+        mean_points_3d = {}
+        for name in all_point_names:
+            points_list = [r['points_3d'][name] for r in results if name in r['points_3d']]
+            if points_list:
+                mean_points_3d[name] = np.mean(points_list, axis=0)
+       
+        # Use already computed mean segments and angles
+        mean_segments = {}
+        for seg_name in sorted(all_segment_names):
+            values = [r['segments'].get(seg_name, 0) for r in results if seg_name in r['segments']]
+            if values:
+                mean_segments[seg_name] = np.mean(values)
+        
+        mean_angles = {}
+        for angle_name in sorted(all_angle_names):
+            values = [r['angles'].get(angle_name, 0) for r in results if angle_name in r['angles']]
+            if values:
+                mean_angles[angle_name] = np.mean(values)
+        
+        # Use first image's frame and keypoints for visualization reference
+        ref_result = results[0]
+        ref_frame = ref_result['frame']
+        ref_keypoints = ref_result['keypoints_2d']
+        ref_model_name = ref_result['model']
+        
+        # Get landmarks_map from model
+        from image_body_3d_modular import load_model
+        model = load_model(ref_model_name)
+        
+        # Create output manager
+        output = OutputManager(f"batch_mean_{ref_model_name}", ref_model_name)
+        
+        # Generate outputs
+        output.annotate_joints(ref_frame, ref_keypoints)
+        output.annotate_measurements(ref_frame, ref_keypoints, mean_segments, mean_angles)
+        output.create_3d_plot(mean_points_3d, model.landmarks_map)
+        
+        print(f"✓ Mean visualizations saved to: {output.output_dir}/\n")
+    
+    # Save to CSV (matching modular format)
+    timestamp = datetime.utcnow().strftime('%Y%m%dT%H%M%S')
+    output_file = args.output.replace('.csv', f'_{timestamp}.csv')
+    
+    # Compute mean 3D points
+    all_point_names = set()
+    for r in results:
+        all_point_names.update(r['points_3d'].keys())
+    
+    mean_points_3d = {}
+    for name in all_point_names:
+        points_list = [r['points_3d'][name] for r in results if name in r['points_3d']]
+        if points_list:
+            mean_points_3d[name] = np.mean(points_list, axis=0)
+    
+    # Compute mean segments  
+    mean_segments = {}
+    for seg_name in sorted(all_segment_names):
+        values = [r['segments'].get(seg_name, 0) for r in results if seg_name in r['segments']]
+        if values:
+            mean_segments[seg_name] = np.mean(values)
+    
+    # Compute mean angles
+    mean_angles = {}
+    for angle_name in sorted(all_angle_names):
+        values = [r['angles'].get(angle_name, 0) for r in results if angle_name in r['angles']]
+        if values:
+            mean_angles[angle_name] = np.mean(values)
+    
+    with open(output_file, 'w', newline='') as f:
+        writer = csv.writer(f)
+        
+        # PARAMETERS
+        writer.writerow(["PARAMETERS"])
+        writer.writerow(["Models Used", ', '.join(models)])
+        writer.writerow(["Images Processed", str(image_nums)])
+        writer.writerow(["Total Measurements Averaged", len(results)])
+        writer.writerow(["Timestamp", timestamp])
+        
+        if args.height:
+            writer.writerow(["Human Height Provided", f"{args.height:.2f}"])
+            writer.writerow(["Mean Calculated Height", f"{mean_height:.2f}"])
+            writer.writerow(["Mean Scale Factor Applied", f"{np.mean([r['scale_factor'] for r in results]):.4f}"])
+            writer.writerow(["Height Std Deviation", f"{std_height:.2f}"])
+        else:
+            writer.writerow(["Mean Calculated Height", f"{mean_height:.2f}"])
+        
+        writer.writerow([])
+        
+        # JOINT COORDINATES
+        writer.writerow(["JOINT COORDINATES (mm)"])
+        writer.writerow(["Body Part", "Left X", "Left Y", "Left Z", "Right X", "Right Y", "Right Z"])
+        
+        bilateral_joints = {
+            "eye": ("Leye", "Reye"),
+            "ear": ("Lear", "Rear"),
+            "shoulder": ("Lshoulder", "Rshoulder"),
+            "elbow": ("Lelbow", "Relbow"),
+            "wrist": ("Lwrist", "Rwrist"),
+            "hip": ("Lhip", "Rhip"),
+            "knee": ("Lknee", "Rknee"),
+            "ankle": ("Lankle", "Rankle"),
+            "heel": ("Lheel", "Rheel"),
+            "foot": ("Lfoot", "Rfoot")
+        }
+        
+        for part_name, (left_key, right_key) in bilateral_joints.items():
+            left_coords = mean_points_3d.get(left_key, np.array([0, 0, 0]))
+            right_coords = mean_points_3d.get(right_key, np.array([0, 0, 0]))
+            writer.writerow([
+                part_name,
+                f"{left_coords[0]:.2f}", f"{left_coords[1]:.2f}", f"{left_coords[2]:.2f}",
+                f"{right_coords[0]:.2f}", f"{right_coords[1]:.2f}", f"{right_coords[2]:.2f}"
+            ])
+        
+        if "nose" in mean_points_3d:
+            nose = mean_points_3d["nose"]
+            writer.writerow(["nose", f"{nose[0]:.2f}", f"{nose[1]:.2f}", f"{nose[2]:.2f}", "", "", ""])
+        
+        writer.writerow([])
+        
+        # SEGMENT LENGTHS
+        writer.writerow(["SEGMENT LENGTHS (cm)"])
+        writer.writerow(["Segment", "Left Length", "Right Length", "Difference"])
+        
+        segment_groups = {
+            "Humerus": ("L Humerus", "R Humerus"),
+            "Radius": ("L Radius", "R Radius"),
+            "Femur": ("L Femur", "R Femur"),
+            "Tibia": ("L Tibia", "R Tibia")
+        }
+        
+        for name, (left_key, right_key) in segment_groups.items():
+            left_val = mean_segments.get(left_key, 0)
+            right_val = mean_segments.get(right_key, 0)
+            diff = abs(left_val - right_val)
+            writer.writerow([name, f"{left_val:.2f}", f"{right_val:.2f}", f"{diff:.2f}"])
+        
+        for key in ["Shoulder Width", "Hip Width", "Torso Length"]:
+            if key in mean_segments:
+                writer.writerow([key, f"{mean_segments[key]:.2f}", "", ""])
+        
+        writer.writerow([])
+        
+        # JOINT ANGLES
+        writer.writerow(["JOINT ANGLES (degrees)"])
+        writer.writerow(["Joint", "Left Angle", "Right Angle", "Difference"])
+        
+        angle_groups = {
+            "Shoulder": ("L Shoulder", "R Shoulder"),
+            "Elbow": ("L Elbow", "R Elbow"),
+            "Hip": ("L Hip", "R Hip"),
+            "Knee": ("L Knee", "R Knee"),
+            "Ankle": ("L Ankle", "R Ankle")
+        }
+        
+        for name, (left_key, right_key) in angle_groups.items():
+            left_val = mean_angles.get(left_key, 0)
+            right_val = mean_angles.get(right_key, 0)
+            diff = abs(left_val - right_val)
+            writer.writerow([name, f"{left_val:.2f}", f"{right_val:.2f}", f"{diff:.2f}"])
+    
+    print(f"\n✓ Results saved to: {output_file}")
+    print(f"\n{'='*60}\n")
+    
+    # Recommendation
+    print("RECOMMENDATION:")
+    if std_height < 5:
+        print("  ✓ Low variance - measurements are consistent")
+        print(f"  → Use mean height: {mean_height:.1f} cm")
+    elif std_height < 10:
+        print("  ⚠ Moderate variance - consider median for robustness")
+        print(f"  → Use median height: {median_height:.1f} cm")
+    else:
+        print("  ⚠ High variance - review individual measurements")
+        print("  → Check for outliers or pose differences between images")
+    print()
+
+if __name__ == "__main__":
+    main()

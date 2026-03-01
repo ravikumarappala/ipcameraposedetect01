@@ -1,0 +1,25 @@
+Measurement,mm,cm,inches
+Shoulder Width,0.2,0.0,0.0
+Left Upper Arm,0.2,0.0,0.0
+Left Forearm,0.2,0.0,0.0
+Left Full Arm,0.4,0.0,0.0
+Right Upper Arm,0.2,0.0,0.0
+Right Forearm,0.2,0.0,0.0
+Right Full Arm,0.4,0.0,0.0
+Neck to Head,0.1,0.0,0.0
+Torso (Pelvis to Neck),0.2,0.0,0.0
+Spine (Pelvis to Spine3),0.1,0.0,0.0
+Hip Width,0.1,0.0,0.0
+Left Thigh,0.4,0.0,0.0
+Left Shin,0.3,0.0,0.0
+Left Full Leg,0.7,0.1,0.0
+Right Thigh,0.3,0.0,0.0
+Right Shin,0.3,0.0,0.0
+Right Full Leg,0.7,0.1,0.0
+Total Height (chain),1.1,0.1,0.0
+Vertical Span,1.1,0.1,0.0
+Arm Span,1.1,0.1,0.0
+Inseam (avg),0.7,0.1,0.0
+Chest Circumference,2.6,0.3,0.1
+Waist Circumference,2.6,0.3,0.1
+Hip Circumference,2.6,0.3,0.1

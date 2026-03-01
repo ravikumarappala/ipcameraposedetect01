@@ -1,0 +1,53 @@
+{
+  "run_id": "20260228_185055",
+  "step_num": 4,
+  "step_name": "triangulation_3d",
+  "direction": "in",
+  "timestamp": "2026-02-28T18:51:00.475806",
+  "fields": {
+    "pts_left": {
+      "type": "ndarray",
+      "shape": [
+        19,
+        2
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/185055/step-4-in/pts_left.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/185055/step-4-in/pts_left.csv"
+    },
+    "pts_right": {
+      "type": "ndarray",
+      "shape": [
+        19,
+        2
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/185055/step-4-in/pts_right.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/185055/step-4-in/pts_right.csv"
+    },
+    "smpl_indices": {
+      "type": "list",
+      "length": 19,
+      "file": "smpl_measurements/run_logs/2026-02-28/185055/step-4-in/smpl_indices.json",
+      "data": [
+        15,
+        16,
+        17,
+        18,
+        19,
+        20,
+        21,
+        22,
+        23,
+        1,
+        2,
+        4,
+        5,
+        7,
+        8,
+        10,
+        11,
+        12,
+        0
+      ]
+    }
+  }
+}

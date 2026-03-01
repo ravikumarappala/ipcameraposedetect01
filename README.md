@@ -1,4 +1,7 @@
 # Dual Camera Placement - Quick Run
+02/13/2026: DISPLAY=:1 python3 image_body_3d.py --num 1 --height 168
+
+
 
 Follow these steps to collect calibration data, compute stereo parameters, and run real-time arm tracking:
 

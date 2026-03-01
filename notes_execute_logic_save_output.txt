@@ -1,0 +1,29 @@
+ip camera/steroe
+
+date/
+	command to execture - current projgram name
+
+	output: 
+	withn this date/ biomech_analysis_mediapipe or hrnet/output in excel format, iamges with markings of 	joints, images with marking of angles, joints with lenghts
+
+	.npz file
+
+input test images
+
+with input - single, avg (taking multiple)
+
+body height  - auto calculate and take user input
+
+
+exec
+program
+
+what is today date:
+
+create folder with date if it does not exist
+what is the cmd input : echo to .txt
+crerate a folder for biochem**model
+copy .npz file to this folder
+produce output to output folder
+
+
