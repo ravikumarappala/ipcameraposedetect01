@@ -13,4 +13,5 @@ dependencies:
       - mediapipe==0.10.7         # 0.10.11 has graph config mismatch on macOS
       - numpy==1.26.4             # pin: opencv pip wheels are incompatible with numpy 2.x
       - trimesh                   # required by step7 rendering
+      - requests                  # required by cf_logger.py
       - Pillow
