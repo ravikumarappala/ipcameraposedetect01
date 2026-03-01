@@ -1,4 +1,35 @@
 # Dual Camera Placement - Quick Run
+02/28/2026:
+caoture_calibration_sidebyside.py
+stereo_calibration_sidebyside.py
+print_camera_params.py
+caoture_test_images.py
+realtime_arm_3d.py
+(not needed)realtime_body_3d_sidebyside.py
+image_body_3d_organized.py
+image_body_3d_batch_organized.py
+
+run_pipeline.py
+smpl_measure.py (combined)
+
+conda activate posedetect
+cd /Users/ravia/cb-poc/moiq/ipcameraposedetect01
+
+python run_pipeline.py \
+  --left test_ss_left1.png \
+  --right test_ss_right1.png \
+  --calib stereo_params_sidebyside.npz
+# (it will prompt you for height, default 168)
+
+
+
+
+
+
+
+02/13/2026: DISPLAY=:1 python3 image_body_3d.py --num 1 --height 168
+
+
 
 Follow these steps to collect calibration data, compute stereo parameters, and run real-time arm tracking:
 

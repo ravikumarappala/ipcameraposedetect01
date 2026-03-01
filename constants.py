@@ -75,5 +75,7 @@ SKELETON_CONNECTIONS = [
 ]
 
 # Default paths
-SMPL_MODEL_PATH = "/media/raviappala/edgeextvol2/jetson-inference/3dpose/smpl_models/smpl/SMPL_NEUTRAL.pkl"
+import os as _os
+_PROJECT_DIR = _os.path.dirname(_os.path.abspath(__file__))
+SMPL_MODEL_PATH = _os.path.join(_PROJECT_DIR, "SMPL", "SMPL_NEUTRAL.pkl")
 DEFAULT_CALIB_PATH = "stereo_params_sidebyside.npz"

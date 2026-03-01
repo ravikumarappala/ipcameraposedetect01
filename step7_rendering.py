@@ -34,8 +34,12 @@ def rotate_for_upright_view(verts_mm, center=None):
         center = v.mean(axis=0)
     v -= center
     x, y, z = v[:, 0].copy(), v[:, 1].copy(), v[:, 2].copy()
-    v[:, 1] = z   # new Y = old Z (forward)
-    v[:, 2] = y   # new Z = old Y (up)
+    # Camera coords: Y-down, Z=depth (varies little across body)
+    # We want: X = left-right, Y = depth (≈0 after centering), Z = UP (body height)
+    # Camera Y-down → negate so head goes to positive Z (up in matplotlib 3D)
+    v[:, 0] = x   # keep left-right
+    v[:, 1] = z   # new Y = depth (near-zero after centering)
+    v[:, 2] = -y  # new Z = -camera_Y_down → positive = UP (head at top)
     return v
 
 
@@ -105,14 +109,14 @@ def render_smpl_mesh_matplotlib(verts_mm, faces, img_size=(800, 800)):
     ax.set_ylim(mid_y - y_half, mid_y + y_half)
     ax.set_zlim(mid_z - z_half, mid_z + z_half)
 
-    ax.view_init(elev=10, azim=75)
+    ax.view_init(elev=5, azim=90)  # front view: looking along depth (Y) axis, Z=up
     ax.axis("off")
 
     fig.tight_layout(pad=0)
     fig.canvas.draw()
     w, h = fig.canvas.get_width_height()
-    img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    img = img.reshape(h, w, 3)
+    buf = fig.canvas.buffer_rgba()
+    img = np.asarray(buf).reshape(h, w, 4)[:, :, :3].copy()
     plt.close(fig)
     return img
 
@@ -279,7 +283,7 @@ def render_smpl_mesh_annotated(verts_mm, faces, joints_mm, measurements, img_siz
         ax.set_xlim(mid[0]-x_half, mid[0]+x_half)
         ax.set_ylim(mid[1]-y_half, mid[1]+y_half)
         ax.set_zlim(mid[2]-z_half, mid[2]+z_half)
-        ax.view_init(elev=10, azim=75)
+        ax.view_init(elev=5, azim=90)  # front view: looking along depth (Y) axis, Z=up
         ax.axis('off')
         fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.02)
         fig.canvas.draw()
@@ -292,7 +296,8 @@ def render_smpl_mesh_annotated(verts_mm, faces, joints_mm, measurements, img_siz
             joints_2d.append((int(round(xp)), int(round(img_size[1] - yp))))
 
         w_f, h_f = fig.canvas.get_width_height()
-        img = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8).reshape(h_f, w_f, 3).copy()
+        buf = fig.canvas.buffer_rgba()
+        img = np.asarray(buf).reshape(h_f, w_f, 4)[:, :, :3].copy()
         plt.close(fig)
         renderer_used = 'matplotlib'
         print("    Using matplotlib renderer")

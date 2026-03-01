@@ -19,8 +19,10 @@ bash Miniconda3-latest-MacOSX-arm64.sh -b -p "$HOME/miniconda3"
 # bash Miniconda3-latest-MacOSX-x86_64.sh -b -p "$HOME/miniconda3"
 
 # Initialise conda in your shell (adds conda to PATH permanently)
+# NOTE: silent install (-b flag) skips this step — must be done manually once
 "$HOME/miniconda3/bin/conda" init zsh    # use 'bash' if you're on bash
 source ~/.zshrc                          # reload shell config
+# After this, open a NEW terminal and 'conda' will be available in PATH
 
 # Verify conda is available
 conda --version
@@ -49,9 +51,15 @@ python -c "import matplotlib; print('matplotlib', matplotlib.__version__)"
 # ⚠️  IMPORTANT – numpy pin (macOS fix, applied 2026-02-28):
 # pip-built opencv wheels are compiled against numpy 1.x ABI.
 # numpy 2.x (from conda-forge) causes: "numpy.core.multiarray failed to import"
-# Fix: after env creation, always pin numpy to 1.26.4
-# conda run -n posedetect pip install "numpy==1.26.4"
-# This is already baked into environment.yml under pip dependencies.
+# Fix: pin numpy to 1.26.4 (already baked into environment.yml)
+
+# ⚠️  IMPORTANT – mediapipe version (macOS fix, applied 2026-02-28):
+# mediapipe 0.10.11 has a graph config mismatch (ValidatedGraphConfig Initialization failed)
+# Fix: use mediapipe 0.10.7 (already baked into environment.yml)
+
+# ⚠️  step7_rendering.py – matplotlib API fix (applied 2026-02-28):
+# matplotlib 3.10 removed fig.canvas.tostring_rgb()
+# Fix: replaced with fig.canvas.buffer_rgba() in step7_rendering.py
 
 
 # ──────────────────────────────────────────────────────────────────

@@ -10,6 +10,7 @@ dependencies:
   - pip:
       - opencv-python==4.9.0.80
       - opencv-contrib-python==4.9.0.80
-      - mediapipe==0.10.11
-      - numpy==1.26.4        # pin: opencv pip wheels are incompatible with numpy 2.x
+      - mediapipe==0.10.7         # 0.10.11 has graph config mismatch on macOS
+      - numpy==1.26.4             # pin: opencv pip wheels are incompatible with numpy 2.x
+      - trimesh                   # required by step7 rendering
       - Pillow
