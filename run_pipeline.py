@@ -227,12 +227,15 @@ def main():
     if measurements:
         summary_csv  = os.path.join(logger.run_dir, "summary.csv")
         summary_json = os.path.join(logger.run_dir, "summary.json")
+        # stepNum=99  — compact flat measurement map + CSV file attachment
         cf.log_summary(
             measurements=measurements,
             height_cm=args.height,
             csv_path=summary_csv,
             json_path=summary_json,
         )
+        # stepNum=100 — full structured doc: joint positions, lengths, angles, metadata
+        cf.log_summary_doc(csv_path=summary_csv)
 
     # Mark run complete
     cf.complete_run(status="complete")

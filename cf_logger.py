@@ -103,30 +103,27 @@ class CFLogger:
     def log_summary(self, measurements: dict, height_cm: float,
                     csv_path: str = None, json_path: str = None):
         """
-        POST /step with stepNum=99 — summary doc in Firestore.
-        Attaches summary.csv to GCS if it exists.
-        measurements: dict of {label: {'cm': float, 'in': float}}
+        POST /step with stepNum=99 — compact summary doc.
+        Attaches summary.csv to GCS.
         """
         if not self.enabled:
             return
 
-        # Build flat measurement dict for Firestore (label → cm value)
         flat = {k: round(v["cm"], 1) for k, v in measurements.items()
                 if isinstance(v, dict) and "cm" in v}
 
         data = {
-            "runId":   self.run_id,
-            "date":    self.date,
+            "runId":     self.run_id,
+            "date":      self.date,
             "timestamp": datetime.datetime.utcnow().isoformat() + "Z",
-            "stepNum": 99,
-            "input":   "pipeline complete — final summary",
-            "output":  f"height={height_cm}cm | " +
-                       " | ".join(f"{k}={v}cm" for k, v in list(flat.items())[:8]),
-            "status":  "summary",
-            "summary": flat,
+            "stepNum":   99,
+            "input":     "pipeline complete — final summary",
+            "output":    f"height={height_cm}cm | " +
+                         " | ".join(f"{k}={v}cm" for k, v in list(flat.items())[:8]),
+            "status":    "summary",
+            "summary":   flat,
         }
 
-        # Attach summary.csv if present
         attach = csv_path if (csv_path and os.path.isfile(csv_path)) else json_path
         if attach and os.path.isfile(attach):
             basename = os.path.basename(attach)
@@ -141,13 +138,66 @@ class CFLogger:
         else:
             self._post_json("/step", data)
 
+    def log_summary_doc(self, csv_path: str):
+        """
+        POST /step with stepNum=100 — full structured Firestore document.
+
+        Parses the entire summary.csv into 4 sections and sends them as
+        structured data (rows + columns with values) so Firestore stores
+        them as a queryable map, not just a flat string.
+
+        Firestore document fields:
+          runId, date, timestamp, stepNum=100, status="summary_doc"
+          joint_positions  : list of {joint, raw_x/y/z, fit_x/y/z}
+          joint_lengths    : list of {label, left_cm, right_cm, diff_cm}
+          joint_angles     : list of {label, left_deg, right_deg, diff_deg}
+          metadata         : dict of label → value
+          gcsPath          : GCS path of the summary.csv attachment
+        """
+        if not self.enabled:
+            return
+        if not csv_path or not os.path.isfile(csv_path):
+            print(f"  [CF] WARNING: log_summary_doc — csv not found: {csv_path}")
+            return
+
+        parsed = _parse_summary_csv(csv_path)
+
+        data = {
+            "runId":           self.run_id,
+            "date":            self.date,
+            "timestamp":       datetime.datetime.utcnow().isoformat() + "Z",
+            "stepNum":         100,
+            "input":           f"summary.csv — {csv_path}",
+            "output":          (
+                f"{len(parsed['joint_positions'])} joints | "
+                f"{len(parsed['joint_lengths'])} length measurements | "
+                f"{len(parsed['joint_angles'])} angles"
+            ),
+            "status":          "summary_doc",
+            # ── structured sections ─────────────────────────────
+            "joint_positions": parsed["joint_positions"],
+            "joint_lengths":   parsed["joint_lengths"],
+            "joint_angles":    parsed["joint_angles"],
+            "metadata":        parsed["metadata"],
+        }
+
+        # Also upload the CSV so Firestore doc has a gcsPath reference
+        gcs_name = f"{self.date}/{self.ts}/{self.run_id}/summary/summary.csv"
+        try:
+            with open(csv_path, "rb") as fh:
+                self._post_multipart("/step", data, gcs_name, fh, "text/csv")
+        except Exception as e:
+            print(f"  [CF] WARNING: log_summary_doc multipart failed: {e}")
+            self._post_json("/step", data)
+
     def complete_run(self, status: str = "complete"):
         """POST /run — update status to complete."""
         if not self.enabled:
             return
         self._post_json("/run", {
             "runId":       self.run_id,
-            "program":     "run_pipeline.py",   # required by CF /run endpoint
+            "program":     "run_pipeline.py",
+            "cmd":         "run_pipeline.py",   # required by CF /run endpoint
             "status":      status,
             "completedAt": datetime.datetime.utcnow().isoformat() + "Z",
         })
@@ -195,3 +245,112 @@ def _guess_mime(path: str) -> str:
         ".pkl":  "application/octet-stream",
         ".txt":  "text/plain",
     }.get(ext, "application/octet-stream")
+
+
+def _safe_float(val: str):
+    """Convert string to float, return None if empty or invalid."""
+    try:
+        return float(val.strip()) if val.strip() else None
+    except ValueError:
+        return None
+
+
+def _parse_summary_csv(csv_path: str) -> dict:
+    """
+    Parse summary.csv into 4 structured sections:
+
+      joint_positions: list of dicts
+        { joint, raw_x, raw_y, raw_z, fit_x, fit_y, fit_z }
+
+      joint_lengths: list of dicts
+        { label, left_cm, right_cm, diff_cm }
+
+      joint_angles: list of dicts
+        { label, left_deg, right_deg, diff_deg }
+
+      metadata: dict
+        { label: value }
+    """
+    import csv as _csv
+
+    joint_positions = []
+    joint_lengths   = []
+    joint_angles    = []
+    metadata        = {}
+
+    # Which section are we in?
+    SECTION_JOINTS   = "joints"
+    SECTION_LENGTHS  = "lengths"
+    SECTION_ANGLES   = "angles"
+    SECTION_META     = "meta"
+    section = None
+
+    with open(csv_path, newline="", encoding="utf-8-sig") as f:
+        reader = _csv.reader(f)
+        for row in reader:
+            # Skip completely blank rows (they separate sections)
+            if not any(cell.strip() for cell in row):
+                continue
+
+            header = row[0].strip()
+
+            # ── Section headers ───────────────────────────────────
+            if header == "Joint" and len(row) >= 7:
+                section = SECTION_JOINTS
+                continue
+            if header == "Joint Length":
+                section = SECTION_LENGTHS
+                continue
+            if header == "Joint Angles":
+                section = SECTION_ANGLES
+                continue
+            if header in ("RMS-Difference", "Length between Cameras",
+                          "Height of Human-calculated", "Height from Mesh",
+                          "Height of Human-user-provided"):
+                section = SECTION_META
+
+            # ── Data rows ─────────────────────────────────────────
+            if section == SECTION_JOINTS:
+                while len(row) < 7:
+                    row.append("")
+                joint_positions.append({
+                    "joint":  header,
+                    "raw_x":  _safe_float(row[1]),
+                    "raw_y":  _safe_float(row[2]),
+                    "raw_z":  _safe_float(row[3]),
+                    "fit_x":  _safe_float(row[4]),
+                    "fit_y":  _safe_float(row[5]),
+                    "fit_z":  _safe_float(row[6]),
+                })
+
+            elif section == SECTION_LENGTHS:
+                while len(row) < 4:
+                    row.append("")
+                joint_lengths.append({
+                    "label":    header,
+                    "left_cm":  _safe_float(row[1]),
+                    "right_cm": _safe_float(row[2]),
+                    "diff_cm":  _safe_float(row[3]),
+                })
+
+            elif section == SECTION_ANGLES:
+                while len(row) < 4:
+                    row.append("")
+                joint_angles.append({
+                    "label":     header,
+                    "left_deg":  _safe_float(row[1]),
+                    "right_deg": _safe_float(row[2]),
+                    "diff_deg":  _safe_float(row[3]),
+                })
+
+            elif section == SECTION_META:
+                val = _safe_float(row[1]) if len(row) > 1 else None
+                metadata[header] = val
+
+    return {
+        "joint_positions": joint_positions,
+        "joint_lengths":   joint_lengths,
+        "joint_angles":    joint_angles,
+        "metadata":        metadata,
+    }
+
