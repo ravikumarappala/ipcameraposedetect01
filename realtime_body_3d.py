@@ -3,6 +3,8 @@ import time
 import cv2
 import numpy as np
 import mediapipe as mp
+import matplotlib
+matplotlib.use('TkAgg')  # macOS-compatible backend; change to 'MacOSX' if TkAgg is unavailable
 import matplotlib.pyplot as plt
 import os
 import csv
@@ -39,7 +41,8 @@ T_stereo = T_stereo.reshape(3,)
 # Helper: camera setup (fast start + lock)
 # ---------------------------
 def setup_cam(cam_index):
-    cap = cv2.VideoCapture(cam_index, cv2.CAP_DSHOW)
+    # CAP_DSHOW is Windows-only; on macOS use default backend
+    cap = cv2.VideoCapture(cam_index)
 
     cap.set(cv2.CAP_PROP_FRAME_WIDTH, WIDTH)
     cap.set(cv2.CAP_PROP_FRAME_HEIGHT, HEIGHT)
