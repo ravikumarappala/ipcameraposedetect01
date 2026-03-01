@@ -1,0 +1,27 @@
+{
+  "run_id": "20260228_190422",
+  "step_num": 3,
+  "step_name": "pose_detection_2d",
+  "direction": "in",
+  "timestamp": "2026-02-28T19:04:26.174889",
+  "fields": {
+    "rect_left": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/190422/step-3-in/rect_left.png"
+    },
+    "rect_right": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/190422/step-3-in/rect_right.png"
+    }
+  }
+}

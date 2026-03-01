@@ -1,0 +1,46 @@
+{
+  "run_id": "20260228_171906",
+  "step_num": 5,
+  "step_name": "smpl_fitting",
+  "direction": "out",
+  "timestamp": "2026-02-28T17:19:58.520069",
+  "fields": {
+    "betas": {
+      "type": "ndarray",
+      "shape": [
+        10
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/betas.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/betas.csv"
+    },
+    "pose": {
+      "type": "ndarray",
+      "shape": [
+        72
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/pose.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/pose.csv"
+    },
+    "trans": {
+      "type": "ndarray",
+      "shape": [
+        3
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/trans.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/trans.csv"
+    },
+    "fitted_joints": {
+      "type": "ndarray",
+      "shape": [
+        24,
+        3
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/fitted_joints.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/171906/step-5-out/fitted_joints.csv"
+    },
+    "num_vertices": {
+      "type": "int",
+      "value": 6890
+    }
+  }
+}

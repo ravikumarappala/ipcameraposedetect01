@@ -1,0 +1,27 @@
+{
+  "run_id": "20260228_184541",
+  "step_num": 1,
+  "step_name": "load_images",
+  "direction": "out",
+  "timestamp": "2026-02-28T18:45:41.606939",
+  "fields": {
+    "left_image": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/184541/step-1-out/left_image.png"
+    },
+    "right_image": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/184541/step-1-out/right_image.png"
+    }
+  }
+}

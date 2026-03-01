@@ -1,0 +1,44 @@
+{
+  "run_id": "20260228_183917",
+  "step_num": 4,
+  "step_name": "triangulation_3d",
+  "direction": "out",
+  "timestamp": "2026-02-28T18:39:21.903260",
+  "fields": {
+    "joints_3d_stereo": {
+      "type": "ndarray",
+      "shape": [
+        19,
+        3
+      ],
+      "file_npy": "smpl_measurements/run_logs/2026-02-28/183917/step-4-out/joints_3d_stereo.npy",
+      "file_csv": "smpl_measurements/run_logs/2026-02-28/183917/step-4-out/joints_3d_stereo.csv"
+    },
+    "joint_names": {
+      "type": "list",
+      "length": 19,
+      "file": "smpl_measurements/run_logs/2026-02-28/183917/step-4-out/joint_names.json",
+      "data": [
+        "head",
+        "l_shoulder",
+        "r_shoulder",
+        "l_elbow",
+        "r_elbow",
+        "l_wrist",
+        "r_wrist",
+        "l_hand",
+        "r_hand",
+        "l_hip",
+        "r_hip",
+        "l_knee",
+        "r_knee",
+        "l_ankle",
+        "r_ankle",
+        "l_foot",
+        "r_foot",
+        "neck",
+        "pelvis"
+      ]
+    }
+  }
+}

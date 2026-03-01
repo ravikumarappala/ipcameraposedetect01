@@ -24,6 +24,7 @@ import pickle
 import time
 import csv
 from datetime import datetime
+from step_logger import StepLogger
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -524,6 +525,25 @@ class BodyMeasurements:
         self.measurements['Vertical Span'] = {
             'mm': vertical_span, 'cm': vertical_span / 10.0, 'in': vertical_span / 25.4,
         }
+        # Vertex-based height: use full vertex Y span, minus toe overshoot
+        # Works in any coordinate system (Y-up or Y-down)
+        if self.vertices is not None:
+            ankle_y_min = min(self.joints[self._joint_idx("l_ankle"), 1],
+                             self.joints[self._joint_idx("r_ankle"), 1])
+            ankle_y_max = max(self.joints[self._joint_idx("l_ankle"), 1],
+                             self.joints[self._joint_idx("r_ankle"), 1])
+            vert_y_min = float(np.min(self.vertices[:, 1]))
+            vert_y_max = float(np.max(self.vertices[:, 1]))
+            dist_to_min = abs(ankle_y_min - vert_y_min)
+            dist_to_max = abs(ankle_y_max - vert_y_max)
+            toe_overshoot = min(dist_to_min, dist_to_max)
+            vert_y_p1 = float(np.percentile(self.vertices[:, 1], 1))
+            vert_y_p99 = float(np.percentile(self.vertices[:, 1], 99))
+            clipped_span = abs(vert_y_p99 - vert_y_p1)
+            mesh_height = clipped_span - toe_overshoot
+            self.measurements['Height from Mesh'] = {
+                'mm': mesh_height, 'cm': mesh_height / 10.0, 'in': mesh_height / 25.4,
+            }
 
     def _compute_arm_span(self):
         arm_span = (
@@ -733,6 +753,10 @@ def render_smpl_mesh(verts_mm, faces, img_size=(800, 800)):
     color, _ = r.render(scene)
     r.delete()
 
+    # Check for blank output (pyrender offscreen fails on some systems)
+    if np.mean(color < 250) < 0.05:
+        raise RuntimeError("pyrender produced blank image (offscreen rendering not supported)")
+
     return color
 
 
@@ -750,16 +774,20 @@ def render_smpl_mesh_matplotlib(verts_mm, faces, img_size=(800, 800)):
     ax.add_collection3d(mesh)
 
     x, y, z = v[:, 0], v[:, 1], v[:, 2]
-    max_range = max(x.max() - x.min(), y.max() - y.min(), z.max() - z.min()) / 2.0
+    # Per-axis limits (Y/depth is much thinner than X/Z after upright rotation)
+    pad = 0.15
+    x_half = (x.max() - x.min()) / 2.0 * (1 + pad)
+    y_half = max((y.max() - y.min()) / 2.0, x_half * 0.3) * (1 + pad)
+    z_half = (z.max() - z.min()) / 2.0 * (1 + pad)
     mid_x = (x.max() + x.min()) / 2.0
     mid_y = (y.max() + y.min()) / 2.0
     mid_z = (z.max() + z.min()) / 2.0
 
-    ax.set_xlim(mid_x - max_range, mid_x + max_range)
-    ax.set_ylim(mid_y - max_range, mid_y + max_range)
-    ax.set_zlim(mid_z - max_range, mid_z + max_range)
+    ax.set_xlim(mid_x - x_half, mid_x + x_half)
+    ax.set_ylim(mid_y - y_half, mid_y + y_half)
+    ax.set_zlim(mid_z - z_half, mid_z + z_half)
 
-    ax.view_init(elev=15, azim=90)
+    ax.view_init(elev=10, azim=75)
     ax.axis("off")
 
     fig.tight_layout(pad=0)
@@ -926,11 +954,15 @@ def render_smpl_mesh_annotated(verts_mm, faces, joints_mm, measurements, img_siz
                        zorder=15, depthshade=False, edgecolors='white', linewidths=0.8)
 
         xv, yv, zv = v[:,0], v[:,1], v[:,2]
-        mr = max(xv.max()-xv.min(), yv.max()-yv.min(), zv.max()-zv.min()) / 2.0 * 1.2
+        # Per-axis limits (Y/depth is much thinner than X/Z after upright rotation)
+        pad = 0.15
+        x_half = (xv.max() - xv.min()) / 2.0 * (1 + pad)
+        y_half = max((yv.max() - yv.min()) / 2.0, x_half * 0.3) * (1 + pad)
+        z_half = (zv.max() - zv.min()) / 2.0 * (1 + pad)
         mid = np.array([(xv.max()+xv.min())/2, (yv.max()+yv.min())/2, (zv.max()+zv.min())/2])
-        ax.set_xlim(mid[0]-mr, mid[0]+mr)
-        ax.set_ylim(mid[1]-mr, mid[1]+mr)
-        ax.set_zlim(mid[2]-mr, mid[2]+mr)
+        ax.set_xlim(mid[0]-x_half, mid[0]+x_half)
+        ax.set_ylim(mid[1]-y_half, mid[1]+y_half)
+        ax.set_zlim(mid[2]-z_half, mid[2]+z_half)
         ax.view_init(elev=10, azim=75)
         ax.axis('off')
         fig.subplots_adjust(left=0.02, right=0.98, top=0.95, bottom=0.02)
@@ -1035,10 +1067,14 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
     device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print(f"Using device: {device}")
 
+    # Initialize step logger
+    logger = StepLogger(base_dir=os.path.join(output_dir, "run_logs"))
+
     # ---- Step 1: Load left and right images ----
     print(f"\n[1/7] Loading images")
     print(f"  Left:  {left_path}")
     print(f"  Right: {right_path}")
+    logger.log_step(1, "in", {"left_path": left_path, "right_path": right_path, "calib_path": calib_path})
     img_left = cv2.imread(left_path)
     img_right = cv2.imread(right_path)
     if img_left is None:
@@ -1047,10 +1083,16 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
         raise FileNotFoundError(f"Cannot read right image: {right_path}")
     print(f"  Left size: {img_left.shape[1]}x{img_left.shape[0]}")
     print(f"  Right size: {img_right.shape[1]}x{img_right.shape[0]}")
+    logger.log_step(1, "out", {"left_image": img_left, "right_image": img_right})
 
     # ---- Step 2: Load stereo calibration ----
     print(f"\n[2/7] Loading stereo calibration")
+    logger.log_step(2, "in", {"calib_path": calib_path})
     stereo = StereoProcessor(calib_path)
+    stereo_info = {
+        "baseline_mm": float(np.linalg.norm(stereo.T)),
+        "img_size": list(stereo.img_size),
+    }
 
     # Resize images to match calibration resolution if needed
     calib_w, calib_h = stereo.img_size
@@ -1064,9 +1106,14 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
 
     # Rectify
     rect_left, rect_right = stereo.rectify(img_left, img_right)
+    logger.log_step(2, "out", {
+        "stereo_info": stereo_info,
+        "rect_left": rect_left, "rect_right": rect_right,
+    })
 
     # ---- Step 3: Detect 2D pose ----
     print(f"\n[3/7] Detecting 2D poses with MediaPipe")
+    logger.log_step(3, "in", {"rect_left": rect_left, "rect_right": rect_right})
     detector = PoseDetector(min_confidence=0.3)
 
     detect_left = rect_left
@@ -1101,18 +1148,34 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
 
     print(f"  Matched landmarks: {len(pts_left)}")
     print(f"  SMPL joints used: {[SMPL_JOINT_NAMES[i] for i in smpl_indices]}")
+    logger.log_step(3, "out", {
+        "landmarks_left": landmarks_left, "landmarks_right": landmarks_right,
+        "pts_left": pts_left, "pts_right": pts_right,
+        "smpl_indices": smpl_indices,
+        "matched_joints": [SMPL_JOINT_NAMES[i] for i in smpl_indices],
+    })
 
     # ---- Step 4: Triangulate 3D joints ----
     print(f"\n[4/7] Triangulating 3D joints")
+    logger.log_step(4, "in", {"pts_left": pts_left, "pts_right": pts_right, "smpl_indices": smpl_indices})
     joints_3d_stereo = stereo.triangulate_points(pts_left, pts_right)
 
     print(f"  Triangulated {len(joints_3d_stereo)} joints")
     for i, (mp_idx, smpl_idx) in enumerate(zip(mp_indices, smpl_indices)):
         j = joints_3d_stereo[i]
         print(f"    {SMPL_JOINT_NAMES[smpl_idx]:>15s}: X={j[0]:7.1f}  Y={j[1]:7.1f}  Z={j[2]:7.1f} mm")
+    logger.log_step(4, "out", {
+        "joints_3d_stereo": joints_3d_stereo,
+        "joint_names": [SMPL_JOINT_NAMES[i] for i in smpl_indices],
+    })
 
     # ---- Step 5: Fit SMPL model ----
     print(f"\n[5/7] Fitting SMPL model")
+    logger.log_step(5, "in", {
+        "joints_3d_stereo": joints_3d_stereo,
+        "smpl_indices": smpl_indices,
+        "smpl_model_path": smpl_path,
+    })
     smpl = SMPLModel(smpl_path, device=device)
 
     # Convert mm→m and flip Y (camera Y-down → SMPL Y-up)
@@ -1130,6 +1193,11 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
     fitted_joints = fitted_joints * 1000.0
 
     print(f"\n  SMPL shape parameters (betas): {betas[:5].round(3)}...")
+    logger.log_step(5, "out", {
+        "betas": betas, "pose": pose, "trans": trans,
+        "fitted_joints": fitted_joints,
+        "num_vertices": len(fitted_verts),
+    })
     print(f"  SMPL fitted {len(fitted_joints)} joints, {len(fitted_verts)} vertices")
 
     # Debug vertex bounds
@@ -1199,8 +1267,10 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
 
     # ---- Step 6: Compute measurements (before rendering so we can annotate) ----
     print(f"\n[6/7] Computing body measurements")
+    logger.log_step(6, "in", {"fitted_joints": fitted_joints})
     measurer = BodyMeasurements(fitted_joints, fitted_verts)
     measurements = measurer.compute_all()
+    logger.log_step(6, "out", {"measurements": measurements})
 
     print(f"\n{'='*60}")
     print(f"  BODY MEASUREMENTS")
@@ -1211,6 +1281,7 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
 
     # ---- Step 7: Render SMPL mesh with annotations ----
     print(f"\n[7/7] Rendering SMPL mesh with joints, lengths & angles")
+    logger.log_step(7, "in", {"measurements": measurements, "num_vertices": len(fitted_verts)})
     # Use the same center for both so they stay aligned
     shared_center = fitted_verts.mean(axis=0)
     verts_upright = rotate_for_upright_view(fitted_verts, center=shared_center)
@@ -1276,6 +1347,21 @@ def process_stereo_image(left_path, right_path, calib_path, smpl_path, output_di
         for face in smpl.faces:
             f.write(f"f {face[0]+1} {face[1]+1} {face[2]+1}\n")
     print(f"  Saved: {mesh_path}")
+
+    # Log step 7 output and write summary
+    logger.log_step(7, "out", {
+        "annotated_mesh": annotated_bgr,
+        "mesh_image": mesh_img_bgr,
+    })
+    logger.write_summary(
+        measurements=measurements,
+        stereo_info=stereo_info,
+        fitted_joints=fitted_joints,
+        joints_3d_stereo=joints_3d_stereo,
+        smpl_indices=smpl_indices,
+        smpl_joint_names=SMPL_JOINT_NAMES,
+        known_height=known_height,
+    )
 
     print(f"\n✓ All results saved to {output_dir}/")
     print(f"✓ Processing complete!")

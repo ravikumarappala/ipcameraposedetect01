@@ -1,0 +1,38 @@
+{
+  "run_id": "20260228_173745",
+  "step_num": 2,
+  "step_name": "stereo_calibration",
+  "direction": "out",
+  "timestamp": "2026-02-28T17:37:48.430515",
+  "fields": {
+    "stereo_info": {
+      "type": "dict",
+      "file": "smpl_measurements/run_logs/2026-02-28/173745/step-2-out/stereo_info.json",
+      "data": {
+        "baseline_mm": 1263.2525325503527,
+        "img_size": [
+          2880,
+          1620
+        ]
+      }
+    },
+    "rect_left": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/173745/step-2-out/rect_left.png"
+    },
+    "rect_right": {
+      "type": "image",
+      "shape": [
+        1620,
+        2880,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/173745/step-2-out/rect_right.png"
+    }
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "run_id": "20260228_192033",
+  "step_num": 7,
+  "step_name": "mesh_rendering",
+  "direction": "out",
+  "timestamp": "2026-02-28T19:21:14.473754",
+  "fields": {
+    "annotated_mesh": {
+      "type": "image",
+      "shape": [
+        1000,
+        1200,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/192033/step-7-out/annotated_mesh.png"
+    },
+    "mesh_image": {
+      "type": "image",
+      "shape": [
+        800,
+        800,
+        3
+      ],
+      "file": "smpl_measurements/run_logs/2026-02-28/192033/step-7-out/mesh_image.png"
+    }
+  }
+}
