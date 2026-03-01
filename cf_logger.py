@@ -140,19 +140,17 @@ class CFLogger:
 
     def log_summary_doc(self, csv_path: str):
         """
-        POST /step with stepNum=100 — full structured Firestore document.
+        POST /step stepNum=100 — full structured Firestore document.
 
-        Parses the entire summary.csv into 4 sections and sends them as
-        structured data (rows + columns with values) so Firestore stores
-        them as a queryable map, not just a flat string.
+        Sends as application/json (NOT multipart) so Firestore stores
+        the nested arrays and maps correctly, not as Python repr strings.
 
         Firestore document fields:
           runId, date, timestamp, stepNum=100, status="summary_doc"
-          joint_positions  : list of {joint, raw_x/y/z, fit_x/y/z}
-          joint_lengths    : list of {label, left_cm, right_cm, diff_cm}
-          joint_angles     : list of {label, left_deg, right_deg, diff_deg}
-          metadata         : dict of label → value
-          gcsPath          : GCS path of the summary.csv attachment
+          joint_positions : list of {joint, raw_x,y,z, fit_x,y,z}
+          joint_lengths   : list of {label, left_cm, right_cm, diff_cm}
+          joint_angles    : list of {label, left_deg, right_deg, diff_deg}
+          metadata        : dict of {label: value}
         """
         if not self.enabled:
             return
@@ -162,33 +160,28 @@ class CFLogger:
 
         parsed = _parse_summary_csv(csv_path)
 
-        data = {
+        # ── Send as pure JSON so Firestore gets proper arrays/maps ────────────
+        # (multipart data= sends nested Python objects as repr strings — broken)
+        payload = {
             "runId":           self.run_id,
             "date":            self.date,
             "timestamp":       datetime.datetime.utcnow().isoformat() + "Z",
             "stepNum":         100,
-            "input":           f"summary.csv — {csv_path}",
+            "input":           "full structured summary parsed from summary.csv",
             "output":          (
                 f"{len(parsed['joint_positions'])} joints | "
                 f"{len(parsed['joint_lengths'])} length measurements | "
                 f"{len(parsed['joint_angles'])} angles"
             ),
             "status":          "summary_doc",
-            # ── structured sections ─────────────────────────────
-            "joint_positions": parsed["joint_positions"],
-            "joint_lengths":   parsed["joint_lengths"],
-            "joint_angles":    parsed["joint_angles"],
-            "metadata":        parsed["metadata"],
+            # ── structured table data ──────────────────────────────────────────
+            "joint_positions": parsed["joint_positions"],   # list of dicts
+            "joint_lengths":   parsed["joint_lengths"],     # list of dicts
+            "joint_angles":    parsed["joint_angles"],      # list of dicts
+            "metadata":        parsed["metadata"],          # flat dict
         }
+        self._post_json("/step", payload)
 
-        # Also upload the CSV so Firestore doc has a gcsPath reference
-        gcs_name = f"{self.date}/{self.ts}/{self.run_id}/summary/summary.csv"
-        try:
-            with open(csv_path, "rb") as fh:
-                self._post_multipart("/step", data, gcs_name, fh, "text/csv")
-        except Exception as e:
-            print(f"  [CF] WARNING: log_summary_doc multipart failed: {e}")
-            self._post_json("/step", data)
 
     def complete_run(self, status: str = "complete"):
         """POST /run — update status to complete."""
