@@ -237,11 +237,28 @@ def main():
         # stepNum=100 — full structured doc: joint positions, lengths, angles, metadata
         cf.log_summary_doc(csv_path=summary_csv)
 
-    # ── Physio measurements (stepNum=101) ──────────────────────────────────────
+    # ══════════════════════════════════════════════════════════════════
+    # Physio measurements
+    #   stepNum=101  → CF steps collection (with full physio doc)
+    #   physio_measurements/{runId} → dedicated Firestore collection
+    # ══════════════════════════════════════════════════════════════════
     if fitted_joints is not None and measurements:
         from step_physio import compute_physio_measurements
+        from firestore_writer import write_physio_measurements
+
+        print(f"\n[Physio] Computing physiotherapy measurements...")
         physio_data = compute_physio_measurements(fitted_joints, measurements)
+
+        # 1. Send to CF as stepNum=101 (alongside the other steps)
         cf.log_physio_doc(physio_data)
+
+        # 2. Write directly to Firestore collection: physio_measurements/{runId}
+        write_physio_measurements(
+            run_id=cf.run_id,
+            date=cf.date,
+            physio_data=physio_data,
+        )
+
 
 
     # Mark run complete

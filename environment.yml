@@ -14,4 +14,5 @@ dependencies:
       - numpy==1.26.4             # pin: opencv pip wheels are incompatible with numpy 2.x
       - trimesh                   # required by step7 rendering
       - requests                  # required by cf_logger.py
+      - protobuf>=3.20,<4         # mediapipe requires protobuf<4
       - Pillow
