@@ -183,6 +183,39 @@ class CFLogger:
         self._post_json("/step", payload)
 
 
+    def log_physio_doc(self, physio_data: dict):
+        """
+        POST /step stepNum=101 — physio-measurements Firestore document.
+
+        Sends as application/json so Firestore stores nested arrays/maps
+        correctly (groups 1-5, flat_table rows, asymmetry_summary).
+
+        physio_data: output of step_physio.compute_physio_measurements()
+        """
+        if not self.enabled:
+            return
+
+        flagged = physio_data.get("asymmetry_summary", {}).get("total_flagged", 0)
+        flat    = physio_data.get("flat_table", [])
+
+        payload = {
+            "runId":             self.run_id,
+            "date":              self.date,
+            "timestamp":         datetime.datetime.utcnow().isoformat() + "Z",
+            "stepNum":           101,
+            "input":             "physio measurements from SMPL joint data",
+            "output":            (
+                f"{len(flat)} measurements across 5 groups | "
+                f"{flagged} asymmetry flag(s) detected"
+            ),
+            "status":            "physio_measurements",
+            # ── 5-group structured table ──────────────────────────────────────
+            "groups":            physio_data.get("groups", {}),
+            "flat_table":        flat,           # single list, one row per code
+            "asymmetry_summary": physio_data.get("asymmetry_summary", {}),
+        }
+        self._post_json("/step", payload)
+
     def complete_run(self, status: str = "complete"):
         """POST /run — update status to complete."""
         if not self.enabled:
@@ -194,6 +227,7 @@ class CFLogger:
             "status":      status,
             "completedAt": datetime.datetime.utcnow().isoformat() + "Z",
         })
+
 
     # ── Internal helpers ────────────────────────────────────────────────────────
 

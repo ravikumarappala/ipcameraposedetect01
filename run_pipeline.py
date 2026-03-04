@@ -237,6 +237,13 @@ def main():
         # stepNum=100 — full structured doc: joint positions, lengths, angles, metadata
         cf.log_summary_doc(csv_path=summary_csv)
 
+    # ── Physio measurements (stepNum=101) ──────────────────────────────────────
+    if fitted_joints is not None and measurements:
+        from step_physio import compute_physio_measurements
+        physio_data = compute_physio_measurements(fitted_joints, measurements)
+        cf.log_physio_doc(physio_data)
+
+
     # Mark run complete
     cf.complete_run(status="complete")
 
