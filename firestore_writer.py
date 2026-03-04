@@ -88,15 +88,30 @@ def write_physio_measurements(run_id: str, date: str, physio_data: dict) -> bool
         print("  [Firestore] WARNING: no auth token — run `gcloud auth print-access-token`")
         return False
 
+    ts  = datetime.datetime.utcnow().isoformat() + "Z"
+
+    # Stamp runId + date + timestamp on every flat_table row
+    # so each row is completely self-contained (Excel-friendly)
+    flat_table = []
+    for row in physio_data.get("flat_table", []):
+        stamped = {
+            "runId":     run_id,
+            "date":      date,
+            "timestamp": ts,
+            **row,
+        }
+        flat_table.append(stamped)
+
     fields = {
         "runId":             run_id,
         "date":              date,
-        "timestamp":         datetime.datetime.utcnow().isoformat() + "Z",
+        "timestamp":         ts,
         "project_id":        GCP_PROJECT,
         "groups":            physio_data.get("groups", {}),
-        "flat_table":        physio_data.get("flat_table", []),
+        "flat_table":        flat_table,          # rows now include runId/date/timestamp
         "asymmetry_summary": physio_data.get("asymmetry_summary", {}),
     }
+
 
     url  = f"{FS_BASE}/{COLLECTION}/{run_id}"
     body = _build_fs_doc(fields)
