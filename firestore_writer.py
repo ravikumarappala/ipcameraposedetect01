@@ -134,3 +134,67 @@ def write_physio_measurements(run_id: str, date: str, physio_data: dict) -> bool
     except Exception as e:
         print(f"  [Firestore] WARNING: REST write failed — {e}")
         return False
+
+
+# ── Mesh physio landmark table ─────────────────────────────────────────────────
+MESH_COLLECTION = "human_mesh_physio_specified_measurements"
+
+def write_physio_mesh_doc(run_id: str, date: str,
+                          placed_landmarks: dict,
+                          measurements: dict,
+                          physio_data: dict,
+                          image_gcs_path: str = "") -> bool:
+    """
+    Write physio mesh landmark data to a dedicated Firestore collection:
+      human_mesh_physio_specified_measurements/{runId}
+
+    Fields:
+      runId, date, timestamp
+      image_gcs_path   — GCS path of physio_annotated.png
+      landmarks        — map of {label → {number, side, smpl_joint, x_mm, y_mm, z_mm}}
+      measurements     — flat body measurements {name → cm}
+      asymmetry_summary — flagged items from physio_data
+    """
+    token = _get_token()
+    if not token:
+        print("  [Firestore] WARNING: no auth token for mesh physio write")
+        return False
+
+    # Flatten measurements to {label: cm_value}
+    meas_flat = {k: v.get("cm") for k, v in measurements.items()
+                 if isinstance(v, dict) and "cm" in v}
+
+    fields = {
+        "runId":             run_id,
+        "date":              date,
+        "timestamp":         datetime.datetime.utcnow().isoformat() + "Z",
+        "project_id":        GCP_PROJECT,
+        "image_gcs_path":    image_gcs_path,
+        "landmarks":         placed_landmarks,     # {label → metadata dict}
+        "measurements_cm":   meas_flat,            # flat {name: cm}
+        "asymmetry_summary": physio_data.get("asymmetry_summary", {}),
+        "total_landmarks":   len(placed_landmarks),
+    }
+
+    url  = f"{FS_BASE}/{MESH_COLLECTION}/{run_id}"
+    body = _build_fs_doc(fields)
+
+    try:
+        resp = requests.patch(
+            url, json=body,
+            headers={
+                "Authorization": f"Bearer {token}",
+                "Content-Type":  "application/json",
+            },
+            timeout=30,
+        )
+        if resp.status_code in (200, 201):
+            print(f"  [Firestore] ✓ {MESH_COLLECTION}/{run_id} → {resp.status_code}")
+            return True
+        else:
+            print(f"  [Firestore] WARNING mesh: {resp.status_code} — {resp.text[:300]}")
+            return False
+    except Exception as e:
+        print(f"  [Firestore] WARNING: mesh write failed — {e}")
+        return False
+

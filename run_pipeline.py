@@ -15,6 +15,7 @@ Disable: export CF_ENABLED=false
 import os
 import sys
 import argparse
+import numpy as np
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from step_logger import StepLogger
@@ -239,24 +240,61 @@ def main():
 
     # ══════════════════════════════════════════════════════════════════
     # Physio measurements
-    #   stepNum=101  → CF steps collection (with full physio doc)
+    #   stepNum=101  → CF steps collection (full physio doc)
     #   physio_measurements/{runId} → dedicated Firestore collection
     # ══════════════════════════════════════════════════════════════════
+    physio_data   = None
+    placed_landmarks = {}
+    physio_img_path  = None
+
     if fitted_joints is not None and measurements:
         from step_physio import compute_physio_measurements
-        from firestore_writer import write_physio_measurements
+        from step_physio_render import run as run_physio_render
+        from firestore_writer import write_physio_measurements, write_physio_mesh_doc
 
         print(f"\n[Physio] Computing physiotherapy measurements...")
         physio_data = compute_physio_measurements(fitted_joints, measurements)
 
-        # 1. Send to CF as stepNum=101 (alongside the other steps)
+        # 1. CF stepNum=101 — full physio structured doc
         cf.log_physio_doc(physio_data)
 
-        # 2. Write directly to Firestore collection: physio_measurements/{runId}
+        # 2. Firestore physio_measurements/{runId}
         write_physio_measurements(
             run_id=cf.run_id,
             date=cf.date,
             physio_data=physio_data,
+        )
+
+        # 3. Render physio landmark mesh image (1R/1L – 27R/27L)
+        print(f"\n[Physio Render] Generating landmark mesh image...")
+        faces_path = os.path.join(logger.run_dir, "step-5-out", "faces.npy")
+        faces_arr  = np.load(faces_path) if os.path.isfile(faces_path) else None
+
+        physio_img_path, placed_landmarks = run_physio_render(
+            logger, fitted_joints, fitted_verts, faces_arr,
+            measurements, physio_data
+        )
+
+        # 4. Upload image to CF (stepNum=102) and capture GCS path
+        gcs_img_path = ""
+        if physio_img_path and os.path.isfile(physio_img_path):
+            cf.log_step(
+                102,
+                input_text="physio landmark render (1R/1L–27R/27L)",
+                output_text=f"{len(placed_landmarks)} landmarks placed",
+                file_path=physio_img_path,
+            )
+            gcs_img_path = (f"{cf.date}/{cf.ts}/{cf.run_id}/102/"
+                            f"physio_annotated.png")
+
+        # 5. Firestore human_mesh_physio_specified_measurements/{runId}
+        write_physio_mesh_doc(
+            run_id           = cf.run_id,
+            date             = cf.date,
+            placed_landmarks = placed_landmarks,
+            measurements     = measurements,
+            physio_data      = physio_data,
+            image_gcs_path   = gcs_img_path,
         )
 
 
