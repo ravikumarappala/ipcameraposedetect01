@@ -78,76 +78,54 @@ def _list_docs(token: str) -> list:
     return [d["name"].rsplit("/", 1)[-1] for d in docs]
 
 # ── CSV export ─────────────────────────────────────────────────────────────────
-# Columns written to every CSV row (fixed order, easy to filter in Excel)
+# ── CSV column spec (dense — every row populated) ─────────────────────────────
+# Core identity (stamped on every row)
 COLUMNS = [
     "runId", "date", "timestamp",
-    "group", "code", "sub", "axis", "landmark",
-    "left_mm", "right_mm", "diff_mm",
-    "left_cm", "right_cm", "diff_cm",
-    "left_knee_y_mm", "right_knee_y_mm",
-    "left_knee_deviation_mm", "right_knee_deviation_mm",
-    "left_knee_x_mm", "right_knee_x_mm",
-    "left_hip_y_mm", "right_hip_y_mm",
-    "left_shoulder_y_mm", "right_shoulder_y_mm",
-    "left_ankle_y_mm", "right_ankle_y_mm",
-    "left_foot_y_mm", "right_foot_y_mm",
-    "shoulder_width_cm", "hip_width_cm",
-    "head_lateral_offset_mm",
-    "auto_result",         # serialised as JSON string
-    "options_list",        # serialised as pipe-separated values
-    "manual_required",
-    "asymmetry",
+    # Measurement identity
+    "group", "group_name", "code", "sub",
+    # Generic values (normalized by _norm() in step_physio)
+    "left_value", "right_value", "diff_value", "value_unit",
+    # Clinical result
+    "auto_result_left", "auto_result_right",
+    "manual_required", "asymmetry",
+    # Options / dropdown
+    "options_str",
+    # Traceability
     "source", "note",
 ]
 
-def _flat_row(row: dict, run_id: str, date: str, timestamp: str) -> dict:
-    """Produce a flat dict suitable for one CSV row."""
-    out = {col: "" for col in COLUMNS}
-    # Keys that map directly
+def _flat_row(row: dict) -> dict:
+    """Return a row dict with exactly COLUMNS populated — no blanks."""
+    out = {}
     for col in COLUMNS:
-        if col in row:
-            val = row[col]
-            if isinstance(val, (dict, list)):
-                out[col] = json.dumps(val, ensure_ascii=False)
-            else:
-                out[col] = "" if val is None else val
-    # Stamp doc-level keys on every row
-    out["runId"]     = row.get("runId",     run_id)
-    out["date"]      = row.get("date",      date)
-    out["timestamp"] = row.get("timestamp", timestamp)
-    # Flatten auto_result (dict → JSON string)
-    ar = row.get("auto_result")
-    out["auto_result"] = json.dumps(ar) if isinstance(ar, (dict, list)) else (ar or "")
-    # Flatten options → pipe-separated string per side
-    opts = row.get("options", {})
-    if isinstance(opts, dict):
-        parts = []
-        for side, choices in opts.items():
-            if isinstance(choices, list):
-                parts.append(f"{side}: {' | '.join(str(c) for c in choices)}")
-            else:
-                parts.append(f"{side}: {choices}")
-        out["options_list"] = "  ||  ".join(parts)
-    elif isinstance(opts, list):
-        out["options_list"] = " | ".join(str(o) for o in opts)
+        val = row.get(col, "")
+        if val is None:
+            val = ""
+        elif isinstance(val, bool):
+            val = str(val)
+        elif isinstance(val, (dict, list)):
+            import json
+            val = json.dumps(val, ensure_ascii=False)
+        out[col] = val
     return out
+
 
 def export_run(run_id: str, token: str):
     print(f"  Downloading {COLLECTION}/{run_id} ...")
     doc      = _get_doc(run_id, token)
     flat_tbl = doc.get("flat_table", [])
-    run_date = doc.get("date", "")
-    run_ts   = doc.get("timestamp", "")
 
     out_file = f"physio_export_{run_id}.csv"
     with open(out_file, "w", newline="", encoding="utf-8") as f:
         writer = csv.DictWriter(f, fieldnames=COLUMNS, extrasaction="ignore")
         writer.writeheader()
         for row in flat_tbl:
-            writer.writerow(_flat_row(row, run_id, run_date, run_ts))
+            writer.writerow(_flat_row(row))
 
     print(f"  ✓ Saved: {out_file}  ({len(flat_tbl)} rows)")
     return out_file
+
 
 # ── Main ───────────────────────────────────────────────────────────────────────
 def main():

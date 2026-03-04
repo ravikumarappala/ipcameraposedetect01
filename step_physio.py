@@ -521,7 +521,13 @@ def compute_physio_measurements(fitted_joints, measurements):
     flat_rows = []
     for group_num, rows in [(1, g1), (2, g2), (3, g3), (4, g4), (5, g5)]:
         for row in rows:
-            flat_rows.append({"group": group_num, **row})
+            flat_rows.append(_norm({
+                "group": group_num,
+                "group_name": {1:"Foot/Ankle/Knee/Hip", 2:"Postural Alignment",
+                               3:"Head/Cervical", 4:"Manual Required",
+                               5:"Supine (Derived)"}[group_num],
+                **row,
+            }))
 
     # ── Asymmetry summary ─────────────────────────────────────────────────────
     flagged = [
@@ -543,3 +549,76 @@ def compute_physio_measurements(fitted_joints, measurements):
             "flagged_items": flagged,
         },
     }
+
+
+def _norm(row: dict) -> dict:
+    """
+    Normalize a row to always have standard columns for CSV export.
+    Picks the first numeric left/right pair found and maps it to
+    left_value / right_value / diff_value / value_unit.
+    Expands auto_result dict → auto_result_left, auto_result_right strings.
+    """
+    r = dict(row)
+
+    # ── Standard value columns ─────────────────────────────────────────────────
+    # Priority order: try mm fields first, then cm fields
+    left_val = right_val = diff_val = None
+    unit = ""
+
+    for (lk, rk, dk, u) in [
+        ("left_mm",              "right_mm",              "diff_mm",      "mm"),
+        ("left_knee_y_mm",       "right_knee_y_mm",       "diff_mm",      "mm"),
+        ("left_shoulder_y_mm",   "right_shoulder_y_mm",   "diff_mm",      "mm"),
+        ("left_hip_y_mm",        "right_hip_y_mm",        "diff_mm",      "mm"),
+        ("left_ankle_y_mm",      "right_ankle_y_mm",      "diff_mm",      "mm"),
+        ("left_foot_y_mm",       "right_foot_y_mm",       "diff_mm",      "mm"),
+        ("left_knee_deviation_mm","right_knee_deviation_mm","diff_mm",    "mm"),
+        ("left_knee_x_mm",       "right_knee_x_mm",       None,           "mm"),
+        ("left_foot_x_mm",       "right_foot_x_mm",       None,           "mm"),
+        ("head_lateral_offset_mm", None,                  None,           "mm"),
+        ("left_cm",              "right_cm",              "diff_cm",       "cm"),
+    ]:
+        lv = r.get(lk)
+        rv = r.get(rk) if rk else None
+        dv = r.get(dk) if dk else (_diff(lv, rv) if (lv is not None and rv is not None) else None)
+        if lv is not None or rv is not None or dv is not None:
+            left_val  = lv
+            right_val = rv
+            diff_val  = dv
+            unit      = u
+            break
+
+    r["left_value"]  = left_val
+    r["right_value"] = right_val
+    r["diff_value"]  = diff_val
+    r["value_unit"]  = unit
+
+    # ── Expand auto_result ─────────────────────────────────────────────────────
+    ar = r.get("auto_result")
+    if isinstance(ar, dict):
+        r["auto_result_right"] = ar.get("Right") or ar.get("Right Side Prox TIB", "")
+        r["auto_result_left"]  = ar.get("Left")  or ar.get("Left Side Prox TIB",  "")
+    elif isinstance(ar, str):
+        r["auto_result_right"] = ar
+        r["auto_result_left"]  = ar
+    else:
+        r["auto_result_right"] = ""
+        r["auto_result_left"]  = ""
+
+    # ── Options as flat pipe-separated string ──────────────────────────────────
+    opts = r.get("options", {})
+    if isinstance(opts, list):
+        r["options_str"] = " | ".join(str(o) for o in opts)
+    elif isinstance(opts, dict):
+        parts = []
+        for side, choices in opts.items():
+            if isinstance(choices, list):
+                parts.append(f"{side}: {' | '.join(str(c) for c in choices)}")
+            else:
+                parts.append(f"{side}: {choices}")
+        r["options_str"] = "  ||  ".join(parts)
+    else:
+        r["options_str"] = str(opts) if opts else ""
+
+    return r
+
